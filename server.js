@@ -218,7 +218,7 @@ app.get('/api/me', (req, res) => {
 });
 
 // ── User: password change ─────────────────────────────────────
-app.post('/api/user/change-password', requireAuth, rateLimit(5, 300000), (req, res) => {
+app.post('/api/user/change-password', requireAuth, (req, res) => {
   const { current_password, new_password } = req.body;
   if (!current_password || !new_password)
     return res.status(400).json({ error: 'Champs manquants' });
@@ -254,7 +254,7 @@ app.delete('/api/user/history', requireAuth, (req, res) => {
 });
 
 // ── Gift card activation ──────────────────────────────────────
-app.post('/api/activate', requireAuth, rateLimit(10, 60000), (req, res) => {
+app.post('/api/activate', requireAuth, (req, res) => {
   const { code } = req.body;
   if (!code) return res.status(400).json({ error: 'Code manquant' });
   const card = stmt.getGiftCard.get(code.trim().toUpperCase());
@@ -610,7 +610,7 @@ function loadDeletedKeys() {
 }
 
 // ── Search — requête unique sur merged.parquet ────────────────
-app.get('/api/search/stream', rateLimit(20, 60000), requireSub, async (req, res) => {
+app.get('/api/search/stream', requireSub, async (req, res) => {
   const q       = (req.query.q || '').trim();
   const filters = (() => { try { return JSON.parse(req.query.filters || '{}'); } catch { return {}; } })();
 

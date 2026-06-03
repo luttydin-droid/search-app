@@ -159,6 +159,29 @@ tr:hover td{background:rgba(97,161,240,0.03)}
 .search-filter-wrap svg{position:absolute;left:10px;color:var(--muted);width:13px;height:13px;pointer-events:none}
 
 .empty-row td{text-align:center;color:var(--muted);padding:32px;font-size:13px}
+
+/* ── Mobile / responsive ─────────────────────────────────────── */
+.menu-btn{display:none;align-items:center;justify-content:center;width:38px;height:38px;border-radius:9px;border:1px solid rgba(97,161,240,0.12);background:rgba(97,161,240,0.06);color:var(--text);cursor:pointer;flex-shrink:0;padding:0;margin-right:12px}
+.menu-btn svg{width:18px;height:18px}
+.sidebar-backdrop{display:none;position:fixed;inset:0;z-index:39;background:rgba(0,0,0,0.55);backdrop-filter:blur(2px)}
+@media (max-width:860px){
+  .menu-btn{display:inline-flex}
+  .sidebar{position:fixed;left:0;top:0;bottom:0;height:100vh;z-index:40;transform:translateX(-100%);transition:transform .25s ease;box-shadow:0 12px 40px rgba(0,0,0,0.6)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-backdrop.visible{display:block}
+  .header{padding:14px 16px}
+  .tabs-bar{padding:0 16px}
+  .content{padding:16px}
+  .table-wrap{overflow-x:auto}
+  table{min-width:640px}
+  .modal{margin:0 16px}
+}
+@media (max-width:560px){
+  .header-title{font-size:13px}
+  .admin-badge{margin-left:auto}
+  .stats-row{grid-template-columns:1fr 1fr}
+  .form-group{min-width:100px}
+}
 </style>
 </head>
 <body>
@@ -169,7 +192,7 @@ tr:hover td{background:rgba(97,161,240,0.03)}
 <div class="layout">
 
   <!-- Sidebar -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <div class="logo-mark">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -202,10 +225,14 @@ tr:hover td{background:rgba(97,161,240,0.03)}
       </div>
     </div>
   </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar()"></div>
 
   <!-- Main -->
   <div class="main">
     <div class="header">
+      <button class="menu-btn" onclick="toggleSidebar()" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
       <span class="header-title">Panneau d'administration</span>
       <div class="admin-badge">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -409,6 +436,12 @@ tr:hover td{background:rgba(97,161,240,0.03)}
 </div>
 
 <script>
+// Sidebar mobile
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-backdrop').classList.toggle('visible');
+}
+
 // Canvas
 const canvas=document.getElementById('bg'),ctx=canvas.getContext('2d');
 let W,H,particles=[];

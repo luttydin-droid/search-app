@@ -251,6 +251,29 @@ canvas#bg{position:fixed;inset:0;z-index:0}
 .state-box p{font-size:13px;line-height:1.7;max-width:300px}
 .state-box .hint-tags{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:4px}
 .state-box .hint-tag{padding:3px 10px;border-radius:6px;font-size:11px;background:rgba(97,161,240,0.07);border:1px solid rgba(97,161,240,0.12);color:var(--muted)}
+
+/* ── Mobile / responsive ─────────────────────────────────────── */
+.menu-btn{display:none;align-items:center;justify-content:center;width:38px;height:38px;border-radius:9px;border:1px solid rgba(97,161,240,0.12);background:rgba(97,161,240,0.06);color:var(--text);cursor:pointer;flex-shrink:0;padding:0}
+.menu-btn svg{width:18px;height:18px}
+.sidebar-backdrop{display:none;position:fixed;inset:0;z-index:39;background:rgba(0,0,0,0.55);backdrop-filter:blur(2px)}
+@media (max-width:860px){
+  .menu-btn{display:inline-flex}
+  .sidebar{position:fixed;left:0;top:0;bottom:0;height:100vh;z-index:40;transform:translateX(-100%);transition:transform .25s ease;box-shadow:0 12px 40px rgba(0,0,0,0.6)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-backdrop.visible{display:block}
+  .header{padding:14px 16px}
+  .search-panel{padding:16px 16px 0}
+  .results-area{padding:0 16px 24px}
+  .progress-bar{margin:0 16px}
+  .result-row{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  .stats-pills{display:none}
+  .action-row{flex-wrap:wrap}
+  .btn-search{flex:1;justify-content:center}
+  .status-text{margin-left:0;width:100%;text-align:center;margin-top:4px}
+  #popover{position:fixed!important;left:10px!important;right:10px;top:auto!important;bottom:10px;min-width:0;width:auto;max-height:78vh;overflow-y:auto}
+}
 </style>
 </head>
 <body>
@@ -261,7 +284,7 @@ canvas#bg{position:fixed;inset:0;z-index:0}
 <div class="layout">
 
   <!-- Sidebar -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <div class="logo-mark">
         <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -304,11 +327,15 @@ canvas#bg{position:fixed;inset:0;z-index:0}
       </div>
     </div>
   </aside>
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleSidebar()"></div>
 
   <!-- Main -->
   <div class="main">
 
     <div class="header">
+      <button class="menu-btn" onclick="toggleSidebar()" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
       <span class="header-title">Base de données unifiée</span>
       <div class="stats-pills">
         <div class="pill"><div class="pill-dot"></div><span class="pill-val" id="stat-rows">…</span><span>entrées</span></div>
@@ -406,6 +433,12 @@ canvas#bg{position:fixed;inset:0;z-index:0}
 </div>
 
 <script>
+// ── Sidebar mobile ────────────────────────────────────────────
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-backdrop').classList.toggle('visible');
+}
+
 // ── Canvas ────────────────────────────────────────────────────
 const canvas=document.getElementById('bg'),ctx=canvas.getContext('2d');
 let W,H,particles=[];

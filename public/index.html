@@ -560,6 +560,16 @@ main { max-width: 1200px; margin: 0 auto; padding: 40px 24px 80px; }
   .results-grid { grid-template-columns: 1fr; }
   .adv-grid { grid-template-columns: 1fr 1fr; }
 }
+@media (max-width: 480px) {
+  header { padding: 0 16px; }
+  .logo-name { font-size: 14px; }
+  .header-right { gap: 8px; }
+  .status-pill { padding: 4px 10px; font-size: 11px; }
+  #row-count-pill { display: none !important; }
+  .search-box { flex-direction: column; }
+  .search-btn { width: 100%; justify-content: center; }
+  .adv-grid { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>

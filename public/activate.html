@@ -121,6 +121,15 @@ canvas#bg{position:fixed;inset:0;z-index:0}
 .skip-link{display:block;text-align:center;margin-top:16px;font-size:12px;color:var(--muted)}
 .skip-link a{color:var(--blue);text-decoration:none;opacity:.7}
 .skip-link a:hover{opacity:1}
+
+/* ── Mobile / responsive ─────────────────────────────────────── */
+@media (max-width:560px){
+  html,body{overflow-y:auto}
+  .page{padding:84px 16px 40px;align-items:flex-start}
+  .card{padding:28px 22px}
+  .card-title{font-size:20px}
+  .code-input{font-size:18px;letter-spacing:3px}
+}
 </style>
 </head>
 <body>

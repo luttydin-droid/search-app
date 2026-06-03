@@ -15,21 +15,7 @@ const PARQUET_DIR  = '../';
 const MERGED_FILE  = '../merged.parquet';
 
 // ── Security: Rate limiter ────────────────────────────────────
-const rateBuckets = new Map(); // ip -> { count, resetAt }
-function rateLimit(max, windowMs = 60000) {
-  return (req, res, next) => {
-    const ip  = req.ip || req.socket.remoteAddress;
-    const now = Date.now();
-    let b = rateBuckets.get(ip);
-    if (!b || now > b.resetAt) b = { count: 0, resetAt: now + windowMs };
-    b.count++;
-    rateBuckets.set(ip, b);
-    if (b.count > max) {
-      return res.status(429).json({ error: 'Trop de requêtes. Réessayez dans une minute.' });
-    }
-    next();
-  };
-}
+const rateBuckets = new Map();
 // Clean rate buckets every 5 minutes
 setInterval(() => {
   const now = Date.now();
@@ -174,7 +160,7 @@ app.get('/admin', (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Auth routes ───────────────────────────────────────────────
-app.post('/api/auth/register', rateLimit(5, 300000), antiVPN, (req, res) => {
+app.post('/api/auth/register', (req, res) => {
   const { username, email, password } = req.body;
   if (!username || !email || !password)
     return res.status(400).json({ error: 'Champs manquants' });

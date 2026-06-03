@@ -182,7 +182,7 @@ app.post('/api/auth/register', (req, res) => {
   res.json({ ok: true, redirect: '/activate' });
 });
 
-app.post('/api/auth/login', rateLimit(10, 300000), antiVPN, (req, res) => {
+app.post('/api/auth/login', (req, res) => {
   const { username, password } = req.body;
   if (!username || !password)
     return res.status(400).json({ error: 'Champs manquants' });

@@ -42,6 +42,18 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_history_user ON search_history(user_id);
   CREATE INDEX IF NOT EXISTS idx_history_date ON search_history(searched_at);
+
+  -- Lignes masquées par un admin (tombstones) : exclues de toutes les recherches
+  CREATE TABLE IF NOT EXISTS deleted_rows (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    row_key     TEXT UNIQUE NOT NULL,
+    source      TEXT,
+    preview     TEXT,
+    deleted_by  INTEGER REFERENCES users(id),
+    deleted_at  TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_deleted_key ON deleted_rows(row_key);
 `);
 
 // Migrations (idempotent)
@@ -84,6 +96,11 @@ const stmt = {
   useGiftCard:     db.prepare("UPDATE gift_cards SET used_by=?, used_at=datetime('now') WHERE code=?"),
   getAllGiftCards:  db.prepare('SELECT g.*, u.username as used_by_name FROM gift_cards g LEFT JOIN users u ON g.used_by=u.id ORDER BY g.created_at DESC'),
   deleteGiftCard:  db.prepare('DELETE FROM gift_cards WHERE id=?'),
+
+  // Lignes masquées (tombstones)
+  addDeletedRow:   db.prepare('INSERT OR IGNORE INTO deleted_rows (row_key, source, preview, deleted_by) VALUES (?,?,?,?)'),
+  getDeletedKeys:  db.prepare('SELECT row_key FROM deleted_rows'),
+  countDeletedRows: db.prepare('SELECT COUNT(*) AS n FROM deleted_rows'),
 };
 
 function generateGiftCode() {

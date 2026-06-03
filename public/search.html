@@ -230,14 +230,32 @@ canvas#bg{position:fixed;inset:0;z-index:0}
 .file-count{margin-left:auto;font-size:10px}
 
 .result-row{
+  position:relative;
   display:grid;grid-template-columns:1fr 1fr;gap:6px;
   padding:10px 14px;border-radius:10px;margin-bottom:4px;
   background:rgba(0,0,0,0.2);border:1px solid rgba(97,161,240,0.06);
-  transition:border-color .15s,background .15s;
+  transition:border-color .15s,background .15s,opacity .2s,transform .2s;
   animation:rowIn .2s ease both;
 }
 @keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 .result-row:hover{border-color:rgba(97,161,240,0.18);background:rgba(97,161,240,0.03)}
+.result-row.removing{opacity:0;transform:translateX(12px)}
+
+/* Bouton suppression (admin uniquement) */
+.btn-del-row{
+  position:absolute;top:8px;right:8px;z-index:2;
+  display:flex;align-items:center;justify-content:center;
+  width:28px;height:28px;padding:0;
+  border-radius:7px;cursor:pointer;
+  background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.18);
+  color:#f87171;opacity:0;transition:opacity .15s,background .15s,transform .1s;
+}
+.result-row:hover .btn-del-row{opacity:1}
+.btn-del-row:hover{background:rgba(248,113,113,0.18);border-color:rgba(248,113,113,0.4)}
+.btn-del-row:active{transform:scale(0.92)}
+.btn-del-row:disabled{opacity:.4;cursor:wait}
+.btn-del-row svg{width:15px;height:15px}
+@media (max-width:860px){.btn-del-row{opacity:1}.result-row{padding-right:44px}}
 .result-col{display:flex;flex-direction:column;gap:4px;min-width:0}
 .kv{display:flex;align-items:baseline;gap:6px;min-width:0}
 .kv-key{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;flex-shrink:0;min-width:62px}
@@ -829,7 +847,48 @@ function buildRow(r){
       ${repPh?kv('Rép. tél',repPh):''}
       ${r.source?`<div class="kv"><span class="kv-key">Source</span><span class="kv-val" style="color:var(--muted);font-size:10px">${escHtml(r.source)}</span></div>`:''}
     </div>`;
+  // Bouton suppression réservé aux admins
+  if(currentUser&&currentUser.is_admin){
+    const btn=document.createElement('button');
+    btn.className='btn-del-row';
+    btn.title='Supprimer définitivement cette donnée';
+    btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`;
+    btn.addEventListener('click',()=>deleteResult(r,div,btn));
+    div.appendChild(btn);
+  }
   return div;
+}
+
+async function deleteResult(row,el,btn){
+  if(!confirm('Supprimer définitivement cette donnée de la base ?\nElle n\'apparaîtra plus dans aucune recherche.'))return;
+  btn.disabled=true;
+  try{
+    const res=await fetch('/api/admin/search/delete',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(row)
+    });
+    if(!res.ok){
+      const d=await res.json().catch(()=>({}));
+      alert(d.error||'Échec de la suppression');
+      btn.disabled=false;
+      return;
+    }
+    // Retirer la ligne du DOM et décrémenter le compteur
+    el.classList.add('removing');
+    setTimeout(()=>{
+      el.remove();
+      const cnt=document.getElementById('live-count');
+      if(cnt){
+        const span=cnt.querySelector('span');
+        const n=Math.max(0,(parseInt((span?.textContent||'0').replace(/\D/g,''),10)||0)-1);
+        if(span)span.textContent=n.toLocaleString('fr-FR');
+      }
+    },200);
+  }catch(e){
+    alert('Erreur réseau');
+    btn.disabled=false;
+  }
 }
 
 // ── Stats & auth ──────────────────────────────────────────────

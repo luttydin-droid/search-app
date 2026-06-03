@@ -5,6 +5,7 @@ const bcrypt       = require('bcryptjs');
 const https        = require('https');
 const path         = require('path');
 const fs           = require('fs');
+const crypto       = require('crypto');
 const { DuckDBInstance } = require('@duckdb/node-api');
 const { db, stmt, generateGiftCode, isSubscribed } = require('./db');
 
@@ -374,6 +375,30 @@ app.get('/api/admin/history', requireAdmin, (req, res) => {
   res.json(stmt.getAllHistory.all());
 });
 
+// ── Admin: masquer une ligne de résultat (tombstone) ──────────
+// Reçoit l'objet ligne tel que renvoyé par /api/search/stream, qui contient
+// l'empreinte opaque `_key` calculée côté serveur sur la LIGNE COMPLÈTE.
+// La ligne est exclue de toutes les recherches futures.
+app.post('/api/admin/search/delete', requireAdmin, (req, res) => {
+  const row = req.body || {};
+  const key = String(row[META_KEY] || '').trim();
+  // L'empreinte est un SHA1 (40 caractères hexadécimaux)
+  if (!/^[a-f0-9]{40}$/.test(key)) {
+    return res.status(400).json({ error: 'Empreinte de ligne invalide' });
+  }
+
+  const preview = [row.first_name, row.last_name, row.email_address, row.phone_numbers]
+    .flat().filter(Boolean).join(' ').slice(0, 200);
+
+  try {
+    stmt.addDeletedRow.run(key, row.source || null, preview || null, req.user.id);
+    deletedKeys.add(key);
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+  res.json({ ok: true });
+});
+
 // ── Stats ─────────────────────────────────────────────────────
 let cachedTotal = 0;
 let cachedSources = [];
@@ -556,6 +581,48 @@ const SELECT_COLS = `
   representative_email_address, representative_phone_numbers
 `;
 
+// ── Lignes masquées (tombstones) ──────────────────────────────
+// Un Parquet est immuable : on ne peut pas effacer une ligne en place.
+// On calcule une empreinte stable de la ligne (mêmes colonnes que SELECT_COLS)
+// et on stocke cette empreinte. Toute ligne dont l'empreinte est masquée est
+// exclue des résultats de recherche.
+const META_KEY = '_key';
+
+// Colonnes renvoyées au front (on n'expose pas d'éventuelles colonnes cachées)
+const DISPLAY_COLS = [
+  'source', 'gender', 'last_name', 'first_name', 'address', 'postal_code', 'city',
+  'date_of_born', 'city_of_born', 'iban', 'bic', 'vehicule_imatriculation',
+  'username', 'ip_address', 'discord_id', 'nir',
+  'phone_numbers', 'email_address',
+  'representative_gender', 'representative_last_name', 'representative_first_name',
+  'representative_email_address', 'representative_phone_numbers',
+];
+
+// Empreinte calculee sur la LIGNE COMPLETE (toutes les colonnes de SELECT *),
+// pour garantir l'unicite : masquer une ligne ne masque jamais une autre donnee.
+function fullRowKey(row) {
+  row = row || {};
+  const cols = Object.keys(row).filter(k => k !== META_KEY).sort();
+  const parts = cols.map(col => {
+    const v = row[col];
+    if (Array.isArray(v)) {
+      return col + '=' + v.map(x => (x == null ? '' : String(x).trim()))
+                          .filter(Boolean).sort().join(',');
+    }
+    return col + '=' + (v == null ? '' : String(v).trim());
+  });
+  return crypto.createHash('sha1').update(parts.join('')).digest('hex');
+}
+
+// Cache en mémoire des empreintes masquées (rechargé au démarrage)
+const deletedKeys = new Set();
+function loadDeletedKeys() {
+  deletedKeys.clear();
+  try {
+    for (const r of stmt.getDeletedKeys.all()) deletedKeys.add(r.row_key);
+  } catch (e) { console.error('  Chargement tombstones:', e.message); }
+}
+
 // ── Search — requête unique sur merged.parquet ────────────────
 app.get('/api/search/stream', rateLimit(20, 60000), requireSub, async (req, res) => {
   const q       = (req.query.q || '').trim();
@@ -590,15 +657,27 @@ app.get('/api/search/stream', rateLimit(20, 60000), requireSub, async (req, res)
 
   const t0 = Date.now();
   try {
+    // SELECT * pour calculer une empreinte sur la ligne COMPLÈTE (unicité)
     const sql = `
-      SELECT ${SELECT_COLS}
+      SELECT *
       FROM '${MERGED_FILE}'
       WHERE ${where}
       LIMIT 200
     `;
     console.log(sql)
-    const rows = await runSQL(sql);
+    const rawRows = await runSQL(sql);
     clearInterval(heartbeat);
+
+    // Empreinte sur la ligne complète, exclusion des masquées, puis on ne
+    // renvoie au front que les colonnes d'affichage + l'empreinte opaque _key.
+    const rows = [];
+    for (const r of rawRows) {
+      const key = fullRowKey(r);
+      if (deletedKeys.has(key)) continue;
+      const out = { [META_KEY]: key };
+      for (const c of DISPLAY_COLS) out[c] = r[c];
+      rows.push(out);
+    }
 
     if (rows.length) send({ type: 'results', results: rows, source: 'merged' });
 
@@ -617,6 +696,8 @@ app.get('/api/search/stream', rateLimit(20, 60000), requireSub, async (req, res)
 // ── Start ─────────────────────────────────────────────────────
 (async () => {
   await initDuckDB();
+  loadDeletedKeys();
+  console.log(`  ${deletedKeys.size} ligne(s) masquee(s)`);
   const files = getParquetFiles();
   app.listen(PORT, () => {
     console.log(`\n  NEXUS  ->  http://localhost:${PORT}`);

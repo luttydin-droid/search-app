@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DataSearch</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0d1117;
+  --bg2:       #161b22;
+  --bg3:       #1c2128;
+  --border:    #30363d;
+  --border2:   #21262d;
+  --text:      #e6edf3;
+  --text2:     #8b949e;
+  --text3:     #6e7681;
+  --accent:    #2f81f7;
+  --accent-dim:#1f6feb33;
+  --green:     #3fb950;
+  --red:       #f85149;
+  --orange:    #d29922;
+  --purple:    #bc8cff;
+  --radius:    8px;
+  --mono:      'Cascadia Code', 'Consolas', 'SF Mono', monospace;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 100vh;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: #30363d; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #484f58; }
+
+/* ── Header ──────────────────────────────────────────────────── */
+header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.logo-mark {
+  width: 32px;
+  height: 32px;
+  background: var(--accent);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.logo-mark svg { width: 18px; height: 18px; }
+.logo-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.2px;
+}
+.logo-name span { color: var(--text2); font-weight: 400; }
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--text2);
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: blink 2.5s ease infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ── Layout ──────────────────────────────────────────────────── */
+main { max-width: 1200px; margin: 0 auto; padding: 40px 24px 80px; }
+
+/* ── Hero search ─────────────────────────────────────────────── */
+.hero {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.hero-title {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.hero-sub {
+  font-size: 13px;
+  color: var(--text2);
+  margin-bottom: 28px;
+}
+
+.search-box {
+  display: flex;
+  gap: 8px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+.search-input-wrap {
+  flex: 1;
+  position: relative;
+}
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text3);
+  pointer-events: none;
+}
+.search-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 16px 0 42px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.search-input::placeholder { color: var(--text3); }
+
+.search-btn {
+  height: 44px;
+  padding: 0 20px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+.search-btn:hover { background: #388bfd; }
+.search-btn:active { opacity: 0.85; }
+.search-btn svg { width: 14px; height: 14px; }
+
+/* ── Advanced ────────────────────────────────────────────────── */
+.adv-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.adv-toggle:hover { color: var(--text); background: var(--bg3); }
+.adv-arrow { transition: transform 0.25s; }
+.adv-toggle.open .adv-arrow { transform: rotate(180deg); }
+
+.adv-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.25s;
+  opacity: 0;
+  max-width: 700px;
+  margin: 0 auto;
+}
+.adv-panel.open { max-height: 500px; opacity: 1; }
+
+.adv-separator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 12px;
+}
+.adv-separator::before, .adv-separator::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border2);
+}
+.adv-separator span {
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.adv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 8px;
+}
+.adv-field label {
+  display: block;
+  font-size: 11px;
+  color: var(--text3);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.adv-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.adv-input:focus { border-color: var(--accent); }
+.adv-input::placeholder { color: var(--text3); }
+
+/* ── Toolbar ─────────────────────────────────────────────────── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  min-height: 36px;
+}
+.result-info { font-size: 13px; color: var(--text2); }
+.result-info strong { color: var(--text); font-weight: 600; }
+.result-info .tag-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--accent-dim);
+  color: var(--accent);
+  border: 1px solid #2f81f744;
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.toolbar-actions { display: flex; gap: 8px; }
+.btn-sm {
+  height: 32px;
+  padding: 0 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text2);
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+}
+.btn-sm:hover { border-color: var(--border), color: var(--text); color: var(--text); }
+.btn-sm.hidden { display: none; }
+
+/* ── Loader ──────────────────────────────────────────────────── */
+.loader {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 0 20px;
+  gap: 12px;
+}
+.loader.active { display: flex; }
+.loader-ring {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader p { color: var(--text2); font-size: 13px; }
+
+/* ── Progress bar ────────────────────────────────────────────── */
+.progress-wrap {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.progress-bar-bg {
+  height: 3px;
+  background: var(--bg3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.15s ease;
+  width: 0%;
+}
+.progress-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text3);
+}
+.progress-file {
+  font-family: var(--mono);
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Representative section ──────────────────────────────────── */
+.card-rep {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border2);
+}
+.rep-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.rep-header svg { flex-shrink: 0; }
+.rep-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 4px;
+}
+.rep-name .rep-gender {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 18px;
+  margin-right: 5px;
+  flex-shrink: 0;
+}
+.rep-gender.male   { background: #1f3a5f; color: #79b8ff; }
+.rep-gender.female { background: #3d1f3a; color: #f9a8d4; }
+
+/* ── Empty state ─────────────────────────────────────────────── */
+.empty-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding: 80px 20px;
+  gap: 10px;
+}
+.empty-state.visible { display: flex; }
+.empty-icon {
+  width: 52px;
+  height: 52px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.empty-state h3 { font-size: 15px; color: var(--text); font-weight: 600; }
+.empty-state p  { font-size: 13px; color: var(--text2); }
+
+/* ── Results ─────────────────────────────────────────────────── */
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 12px;
+}
+
+/* ── Card ────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  overflow: hidden;
+  animation: fadeUp 0.2s ease both;
+  transition: border-color 0.15s;
+}
+.card:hover { border-color: var(--border); }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border2);
+  gap: 8px;
+}
+.card-identity { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+  font-family: var(--mono);
+}
+.avatar.male   { background: #1f3a5f; color: #79b8ff; border: 1px solid #2f4f7a; }
+.avatar.female { background: #3d1f3a; color: #f9a8d4; border: 1px solid #5a2f55; }
+.avatar.unknown { background: var(--bg3); color: var(--text3); border: 1px solid var(--border2); }
+
+.card-name-block { min-width: 0; }
+.card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-gender {
+  font-size: 11px;
+  color: var(--text3);
+  margin-top: 1px;
+}
+
+.source-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-family: var(--mono);
+}
+
+.card-body { padding: 8px 14px 12px; }
+.field-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  padding: 3px 0;
+  border-radius: 4px;
+  transition: background 0.1s;
+  position: relative;
+}
+.field-row:hover { background: var(--bg3); padding-left: 4px; padding-right: 4px; margin: 0 -4px; }
+.field-row:hover .copy-btn { opacity: 1; }
+
+.field-label {
+  font-size: 11px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  min-width: 70px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.field-value {
+  font-size: 13px;
+  color: var(--text);
+  flex: 1;
+  word-break: break-all;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+.field-value.mono {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: #79c0ff;
+}
+.tag-chip {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 12px;
+}
+.copy-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text3);
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 11px;
+  transition: all 0.12s;
+  flex-shrink: 0;
+}
+.copy-btn:hover { background: var(--border); color: var(--text); }
+.copy-btn.ok { color: var(--green); opacity: 1; }
+
+/* ── Source badge palette ────────────────────────────────────── */
+/* Generated in JS */
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  main { padding: 24px 16px 60px; }
+  .hero-title { font-size: 22px; }
+  .results-grid { grid-template-columns: 1fr; }
+  .adv-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </div>
+    <span class="logo-name">Data<span>Search</span></span>
+  </div>
+  <div class="header-right">
+    <div class="status-pill">
+      <div class="status-dot"></div>
+      <span id="db-count">Chargement…</span>
+    </div>
+    <div class="status-pill" id="row-count-pill" style="display:none">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text3)">
+        <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+      </svg>
+      <span id="row-count">…</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main ──────────────────────────────────────────────────── -->
+<main>
+  <div class="hero">
+    <h1 class="hero-title">Recherche unifiée</h1>
+    <p class="hero-sub">Interrogez toutes les bases de données simultanément — nom, email, téléphone, IBAN, NIR, IP…</p>
+
+    <div class="search-box">
+      <div class="search-input-wrap">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          class="search-input" id="main-input" type="text"
+          placeholder="Rechercher dans toutes les bases…"
+          autocomplete="off" spellcheck="false"
+        />
+      </div>
+      <button class="search-btn" id="search-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+             stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Rechercher
+      </button>
+    </div>
+
+    <div>
+      <span class="adv-toggle" id="adv-toggle">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="6" x2="20" y2="6"/>
+          <line x1="8" y1="12" x2="16" y2="12"/>
+          <line x1="11" y1="18" x2="13" y2="18"/>
+        </svg>
+        Filtres avancés
+        <svg class="adv-arrow" width="11" height="11" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </span>
+    </div>
+
+    <div class="adv-panel" id="adv-panel">
+      <div class="adv-separator"><span>Critères supplémentaires</span></div>
+      <div class="adv-grid">
+        <div class="adv-field"><label>Nom</label>
+          <input class="adv-input" id="f-last_name"    placeholder="Dupont"/></div>
+        <div class="adv-field"><label>Prénom</label>
+          <input class="adv-input" id="f-first_name"   placeholder="Marie"/></div>
+        <div class="adv-field"><label>Email</label>
+          <input class="adv-input" id="f-email"        placeholder="user@domain.fr"/></div>
+        <div class="adv-field"><label>Téléphone</label>
+          <input class="adv-input" id="f-phone"        placeholder="0612345678"/></div>
+        <div class="adv-field"><label>Ville</label>
+          <input class="adv-input" id="f-city"         placeholder="Paris"/></div>
+        <div class="adv-field"><label>Code postal</label>
+          <input class="adv-input" id="f-postal_code"  placeholder="75001"/></div>
+        <div class="adv-field"><label>Date de naissance</label>
+          <input class="adv-input" id="f-date_of_born" placeholder="dd-MM-YYYY"/></div>
+        <div class="adv-field"><label>NIR (N° Sécu)</label>
+          <input class="adv-input" id="f-nir"          placeholder="1 85 05 75…"/></div>
+        <div class="adv-field"><label>IBAN</label>
+          <input class="adv-input" id="f-iban"         placeholder="FR76…"/></div>
+        <div class="adv-field"><label>Username</label>
+          <input class="adv-input" id="f-username"     placeholder="pseudo"/></div>
+        <div class="adv-field"><label>Adresse IP</label>
+          <input class="adv-input" id="f-ip_address"   placeholder="192.168.1.1"/></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="result-info" id="result-info"></div>
+    <div class="toolbar-actions">
+      <button class="btn-sm hidden" id="export-btn">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Exporter JSON
+      </button>
+    </div>
+  </div>
+
+  <!-- Loader -->
+  <div class="loader" id="loader">
+    <div class="loader-ring"></div>
+    <p id="loader-text">Interrogation de toutes les bases…</p>
+    <div class="progress-wrap" id="progress-wrap" style="display:none">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill"></div></div>
+      <div class="progress-meta">
+        <span class="progress-file" id="progress-file"></span>
+        <span id="progress-count"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty -->
+  <div class="empty-state" id="empty-state">
+    <div class="empty-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6e7681"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        <line x1="8" y1="11" x2="14" y2="11"/>
+      </svg>
+    </div>
+    <h3>Aucun résultat</h3>
+    <p>Vérifiez l'orthographe ou essayez d'autres critères.</p>
+  </div>
+
+  <!-- Results -->
+  <div class="results-grid" id="results"></div>
+</main>
+
+<script>
+// ── Field config ──────────────────────────────────────────────
+const FIELDS = [
+  { key: 'address',                 label: 'Adresse'   },
+  { key: 'postal_code',             label: 'Code postal' },
+  { key: 'city',                    label: 'Ville'     },
+  { key: 'date_of_born',            label: 'Naissance' },
+  { key: 'city_of_born',            label: 'Ville naiss.' },
+  { key: 'phone_numbers',           label: 'Téléphone', arr: true },
+  { key: 'email_address',           label: 'Email',    arr: true },
+  { key: 'iban',                    label: 'IBAN',     mono: true },
+  { key: 'bic',                     label: 'BIC',      mono: true },
+  { key: 'nir',                     label: 'NIR',      mono: true },
+  { key: 'ip_address',              label: 'IP',       mono: true },
+  { key: 'username',                label: 'Username', mono: true },
+  { key: 'discord_id',              label: 'Discord',  mono: true },
+  { key: 'vehicule_imatriculation', label: 'Immat.',   mono: true },
+];
+
+const REP_FIELDS = [
+  { key: 'representative_phone_numbers', label: 'Téléphone', arr: true },
+  { key: 'representative_email_address', label: 'Email',     arr: true },
+];
+
+// ── Source badge colors ───────────────────────────────────────
+const PALETTES = [
+  { bg:'#1c2f4a', fg:'#58a6ff', border:'#2f4f7a' },
+  { bg:'#1f2d1f', fg:'#3fb950', border:'#2f4f2f' },
+  { bg:'#2d1f2d', fg:'#bc8cff', border:'#4f2f6a' },
+  { bg:'#2d2419', fg:'#d29922', border:'#5a4210' },
+  { bg:'#2d1f1f', fg:'#f85149', border:'#5a2f2f' },
+  { bg:'#1f2d2d', fg:'#39d3d3', border:'#2f5a5a' },
+  { bg:'#2a1f2d', fg:'#f778ba', border:'#5a2f4f' },
+  { bg:'#1f2a1f', fg:'#56d364', border:'#2f5a35' },
+  { bg:'#282013', fg:'#e3b341', border:'#584810' },
+  { bg:'#131d2f', fg:'#79c0ff', border:'#1f3d6a' },
+];
+function badgePalette(src) {
+  let h = 0;
+  for (const c of src) h = ((h << 5) - h + c.charCodeAt(0)) | 0;
+  return PALETTES[Math.abs(h) % PALETTES.length];
+}
+function initials(fn, ln) {
+  const a = (fn||'').trim()[0] || '';
+  const b = (ln||'').trim()[0] || '';
+  return (a + b).toUpperCase() || '?';
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function parseArr(v) {
+  if (Array.isArray(v)) return v.filter(x => x && x !== 'NULL');
+  if (!v || v === 'NULL' || v === '[]' || v === '') return [];
+  const s = String(v).replace(/^\[/,'').replace(/\]$/,'').trim();
+  if (!s) return [];
+  return s.split(',').map(x => x.trim().replace(/^'+|'+$/g,'')).filter(Boolean);
+}
+function copyText(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const prev = btn.textContent;
+    btn.textContent = '✓';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = prev; btn.classList.remove('ok'); }, 1500);
+  });
+}
+
+// ── Card renderer ─────────────────────────────────────────────
+function renderCard(r, idx) {
+  const fn  = (r.first_name || '').trim();
+  const ln  = (r.last_name  || '').trim();
+  const fullName = [fn, ln].filter(Boolean).join(' ') || 'Inconnu';
+  const gender = (r.gender || '').toLowerCase();
+  const ava = initials(fn, ln);
+  const gLabel = gender === 'male' ? 'Homme' : gender === 'female' ? 'Femme' : '';
+
+  const src = r._source || 'unknown';
+  const pal = badgePalette(src);
+
+  const rows = FIELDS.map(f => {
+    const raw = r[f.key];
+    if (f.arr) {
+      const arr = parseArr(raw);
+      if (!arr.length) return '';
+      const chips = arr.map(v => `<span class="tag-chip">${esc(v)}</span>`).join('');
+      const copyVal = arr.join(', ').replace(/'/g, "\\'");
+      return `<div class="field-row">
+        <span class="field-label">${f.label}</span>
+        <span class="field-value">${chips}</span>
+        <button class="copy-btn" onclick="copyText('${copyVal}',this)">⎘</button>
+      </div>`;
+    }
+    if (!raw || raw === 'NULL') return '';
+    const display = esc(String(raw));
+    const cls = f.mono ? ' mono' : '';
+    const copyVal = String(raw).replace(/'/g, "\\'");
+    return `<div class="field-row">
+      <span class="field-label">${f.label}</span>
+      <span class="field-value${cls}">${display}</span>
+      <button class="copy-btn" onclick="copyText('${copyVal}',this)">⎘</button>
+    </div>`;
+  }).filter(Boolean).join('');
+
+  // ── Representative block ─────────────────────────────────────
+  const repFn = (r.representative_first_name || '').trim();
+  const repLn = (r.representative_last_name  || '').trim();
+  const repFullName = [repFn, repLn].filter(Boolean).join(' ');
+  const repGender   = (r.representative_gender || '').toLowerCase();
+
+  let repBlock = '';
+  if (repFullName) {
+    const repRows = REP_FIELDS.map(f => {
+      const raw = r[f.key];
+      if (f.arr) {
+        const arr = parseArr(raw);
+        if (!arr.length) return '';
+        const chips = arr.map(v => `<span class="tag-chip">${esc(v)}</span>`).join('');
+        const copyVal = arr.join(', ').replace(/'/g, "\\'");
+        return `<div class="field-row">
+          <span class="field-label">${f.label}</span>
+          <span class="field-value">${chips}</span>
+          <button class="copy-btn" onclick="copyText('${copyVal}',this)">⎘</button>
+        </div>`;
+      }
+      return '';
+    }).filter(Boolean).join('');
+
+    const repGenderBadge = repGender
+      ? `<span class="rep-gender ${repGender}">${repGender === 'male' ? 'M' : 'F'}</span>`
+      : '';
+
+    repBlock = `
+      <div class="card-rep">
+        <div class="rep-header">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          Représentant légal
+        </div>
+        <div class="rep-name">${repGenderBadge}${esc(repFullName)}</div>
+        ${repRows}
+      </div>`;
+  }
+
+  const delay = Math.min(idx * 25, 500);
+
+  return `<div class="card" style="animation-delay:${delay}ms">
+    <div class="card-header">
+      <div class="card-identity">
+        <div class="avatar ${gender||'unknown'}">${esc(ava)}</div>
+        <div class="card-name-block">
+          <div class="card-name">${esc(fullName)}</div>
+          ${gLabel ? `<div class="card-gender">${gLabel}</div>` : ''}
+        </div>
+      </div>
+      <span class="source-badge" style="background:${pal.bg};color:${pal.fg};border:1px solid ${pal.border}">${esc(src)}</span>
+    </div>
+    <div class="card-body">
+      ${rows || '<span style="color:var(--text3);font-size:12px">Aucun détail disponible</span>'}
+      ${repBlock}
+    </div>
+  </div>`;
+}
+
+// ── Search (SSE streaming) ────────────────────────────────────
+let allResults = [];
+let currentES  = null;
+
+function getFilters() {
+  const filters = {};
+  ['last_name','first_name','email','phone','city','postal_code',
+   'date_of_born','nir','iban','username','ip_address'].forEach(k => {
+    const el = document.getElementById('f-' + k);
+    if (el) filters[k] = el.value.trim();
+  });
+  return filters;
+}
+
+function updateResultInfo(count, filesTotal, ms) {
+  const timeStr = ms < 1000 ? `${ms}ms` : `${(ms/1000).toFixed(1)}s`;
+  const n = count;
+  document.getElementById('result-info').innerHTML =
+    n > 0
+      ? `<span class="tag-count">${n}</span>&nbsp; résultat${n>1?'s':''} sur <strong>${filesTotal}</strong> bases — ${timeStr}`
+      : `<strong>0</strong> résultat — ${timeStr}`;
+}
+
+function doSearch() {
+  const q = document.getElementById('main-input').value.trim();
+  const filters = getFilters();
+  if (!q && !Object.values(filters).some(v => v)) return;
+
+  // Cancel previous stream
+  if (currentES) { currentES.close(); currentES = null; }
+
+  // Reset UI
+  document.getElementById('loader').classList.add('active');
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('empty-state').classList.remove('visible');
+  document.getElementById('result-info').innerHTML = '';
+  document.getElementById('export-btn').classList.add('hidden');
+  document.getElementById('progress-wrap').style.display = 'none';
+  document.getElementById('loader-text').textContent = 'Interrogation de toutes les bases…';
+
+  allResults = [];
+  const t0 = Date.now();
+  let cardIndex = 0;
+  const resultsEl = document.getElementById('results');
+
+  const params = new URLSearchParams({
+    q,
+    filters: JSON.stringify(filters),
+  });
+  const es = new EventSource(`/api/search/stream?${params}`);
+  currentES = es;
+
+  es.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+
+    if (msg.type === 'results') {
+      // Show progress wrap once we start getting data
+      document.getElementById('progress-wrap').style.display = 'flex';
+      msg.results.forEach(r => {
+        allResults.push(r);
+        const div = document.createElement('div');
+        div.innerHTML = renderCard(r, cardIndex++);
+        resultsEl.appendChild(div.firstElementChild);
+      });
+      const n = allResults.length;
+      document.getElementById('result-info').innerHTML =
+        `<span class="tag-count">${n}</span>&nbsp; résultat${n>1?'s':''} trouvé${n>1?'s':''}…`;
+      if (n > 0) document.getElementById('export-btn').classList.remove('hidden');
+    }
+
+    if (msg.type === 'progress') {
+      const pct = Math.round((msg.done / msg.total_files) * 100);
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('progress-file').textContent = msg.file;
+      document.getElementById('progress-count').textContent = `${msg.done}/${msg.total_files}`;
+    }
+
+    if (msg.type === 'done') {
+      es.close();
+      currentES = null;
+      document.getElementById('loader').classList.remove('active');
+      document.getElementById('progress-wrap').style.display = 'none';
+      const ms = Date.now() - t0;
+      updateResultInfo(allResults.length, msg.files, ms);
+      if (!allResults.length) {
+        document.getElementById('empty-state').classList.add('visible');
+      }
+    }
+
+    if (msg.type === 'error') {
+      console.warn(`Erreur sur ${msg.file}: ${msg.message}`);
+    }
+  };
+
+  es.onerror = () => {
+    es.close();
+    currentES = null;
+    document.getElementById('loader').classList.remove('active');
+    if (!allResults.length) {
+      document.getElementById('result-info').innerHTML =
+        `<span style="color:var(--red)">Erreur de connexion</span>`;
+    }
+  };
+}
+
+// ── Export ────────────────────────────────────────────────────
+document.getElementById('export-btn').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(allResults, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `results_${Date.now()}.json`;
+  a.click();
+});
+
+// ── Advanced toggle ───────────────────────────────────────────
+document.getElementById('adv-toggle').addEventListener('click', function() {
+  this.classList.toggle('open');
+  document.getElementById('adv-panel').classList.toggle('open');
+});
+
+// ── Events ────────────────────────────────────────────────────
+document.getElementById('search-btn').addEventListener('click', doSearch);
+document.getElementById('main-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doSearch();
+});
+document.querySelectorAll('.adv-input').forEach(el => {
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+});
+
+// ── Stats ─────────────────────────────────────────────────────
+function formatMillions(n) {
+  if (n >= 1e9) return (n / 1e9).toFixed(1) + 'G';
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(0) + 'K';
+  return n.toString();
+}
+
+function loadStats() {
+  fetch('/api/stats').then(r => r.json()).then(d => {
+    document.getElementById('db-count').textContent =
+      `${d.files_count} base${d.files_count > 1 ? 's' : ''}`;
+    if (d.total_rows && d.total_rows > 0) {
+      document.getElementById('row-count').textContent =
+        formatMillions(d.total_rows) + ' entrées indexées';
+      document.getElementById('row-count-pill').style.display = 'flex';
+    } else {
+      // Reessayer dans 5s si le comptage est toujours en cours
+      setTimeout(loadStats, 5000);
+    }
+  }).catch(() => {
+    document.getElementById('db-count').textContent = 'Hors ligne';
+  });
+}
+loadStats();
+</script>
+</body>
+</html>

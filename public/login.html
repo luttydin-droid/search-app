@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NEXUS — Connexion</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060913;
+  --blue:#61A1F0;
+  --cyan:#00d4ff;
+  --purple:#a855f7;
+  --glass:rgba(255,255,255,0.04);
+  --glass-border:rgba(97,161,240,0.2);
+  --text:#e2eaff;
+  --muted:#6b7fa3;
+}
+html,body{height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+canvas#bg{position:fixed;inset:0;z-index:0}
+
+/* Grid lines overlay */
+.grid{
+  position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(97,161,240,0.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(97,161,240,0.03) 1px,transparent 1px);
+  background-size:60px 60px;
+}
+
+/* Glow orbs */
+.orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:1;animation:orbMove 8s ease-in-out infinite alternate}
+.orb-1{width:400px;height:400px;background:rgba(97,161,240,0.12);top:-100px;left:-100px;animation-delay:0s}
+.orb-2{width:300px;height:300px;background:rgba(168,85,247,0.1);bottom:-80px;right:-80px;animation-delay:-3s}
+.orb-3{width:200px;height:200px;background:rgba(0,212,255,0.08);top:50%;right:10%;animation-delay:-5s}
+@keyframes orbMove{0%{transform:translate(0,0) scale(1)}100%{transform:translate(30px,20px) scale(1.1)}}
+
+.page{position:relative;z-index:10;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+
+/* Logo top */
+.logo-bar{
+  position:fixed;top:24px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:10px;z-index:20;
+}
+.logo-mark{
+  width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--blue),var(--cyan));
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 20px rgba(97,161,240,0.5);
+}
+.logo-mark svg{width:18px;height:18px}
+.logo-text{font-size:16px;font-weight:700;letter-spacing:0.5px;color:var(--text)}
+.logo-text span{color:var(--blue)}
+
+/* Card */
+.card{
+  width:100%;max-width:400px;
+  background:var(--glass);
+  border:1px solid var(--glass-border);
+  border-radius:20px;
+  padding:36px;
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+  box-shadow:0 0 60px rgba(97,161,240,0.08),0 25px 50px rgba(0,0,0,0.4);
+  animation:cardIn .5s ease both;
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.card-title{font-size:22px;font-weight:700;margin-bottom:4px;text-align:center}
+.card-sub{font-size:13px;color:var(--muted);text-align:center;margin-bottom:28px}
+
+.tabs{display:flex;gap:0;margin-bottom:24px;background:rgba(0,0,0,0.3);border-radius:10px;padding:4px}
+.tab{
+  flex:1;padding:8px;border:none;background:none;color:var(--muted);
+  font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;
+  border-radius:7px;transition:all .2s;
+}
+.tab.active{background:rgba(97,161,240,0.15);color:var(--blue);box-shadow:0 0 12px rgba(97,161,240,0.2)}
+
+.form{display:flex;flex-direction:column;gap:14px}
+.field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.input-wrap{position:relative}
+.input-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);width:15px;height:15px;pointer-events:none}
+input[type=text],input[type=email],input[type=password]{
+  width:100%;height:44px;padding:0 14px 0 38px;
+  background:rgba(0,0,0,0.35);
+  border:1px solid rgba(97,161,240,0.15);
+  border-radius:10px;color:var(--text);
+  font-family:inherit;font-size:14px;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(97,161,240,0.12)}
+input::placeholder{color:#3d4f6e}
+
+.btn{
+  height:46px;border:none;border-radius:10px;cursor:pointer;
+  font-family:inherit;font-size:14px;font-weight:700;
+  letter-spacing:.3px;transition:all .2s;margin-top:4px;
+  position:relative;overflow:hidden;
+}
+.btn-primary{
+  background:linear-gradient(135deg,var(--blue),var(--cyan));
+  color:#fff;
+  box-shadow:0 0 20px rgba(97,161,240,0.4);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 0 30px rgba(97,161,240,0.6)}
+.btn-primary:active{transform:translateY(0)}
+.btn-primary::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,transparent,rgba(255,255,255,0.15),transparent);
+  transform:translateX(-100%);transition:transform .4s;
+}
+.btn-primary:hover::after{transform:translateX(100%)}
+
+.divider{text-align:center;font-size:12px;color:var(--muted);margin:4px 0;position:relative}
+.divider::before,.divider::after{content:'';position:absolute;top:50%;width:40%;height:1px;background:rgba(97,161,240,0.1)}
+.divider::before{left:0}.divider::after{right:0}
+
+.msg{
+  padding:10px 14px;border-radius:8px;font-size:13px;text-align:center;
+  animation:fadeIn .3s ease;display:none;
+}
+.msg.error{background:rgba(248,81,73,0.12);border:1px solid rgba(248,81,73,0.3);color:#f85149}
+.msg.success{background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.3);color:#3fb950}
+.msg.visible{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+
+/* Footer */
+.card-footer{margin-top:20px;text-align:center;font-size:12px;color:var(--muted)}
+.card-footer a{color:var(--blue);text-decoration:none}
+
+/* Stats badge */
+.stats-badge{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  display:flex;align-items:center;gap:8px;padding:6px 16px;
+  background:var(--glass);border:1px solid var(--glass-border);
+  border-radius:20px;backdrop-filter:blur(12px);
+  font-size:12px;color:var(--muted);z-index:20;
+  animation:cardIn .8s .3s ease both;
+}
+.stats-dot{width:6px;height:6px;border-radius:50%;background:#3fb950;box-shadow:0 0 8px #3fb950;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+<div class="grid"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div class="logo-bar">
+  <div class="logo-mark">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+  </div>
+  <span class="logo-text">NEX<span>US</span></span>
+</div>
+
+<div class="page">
+  <div class="card">
+    <h1 class="card-title">Bienvenue sur NEXUS</h1>
+    <p class="card-sub">Plateforme d'accès aux données unifiées</p>
+
+    <div class="tabs">
+      <button class="tab active" id="tab-login" onclick="showTab('login')">Connexion</button>
+      <button class="tab" id="tab-register" onclick="showTab('register')">Inscription</button>
+    </div>
+
+    <div id="msg" class="msg"></div>
+
+    <!-- Login form -->
+    <form class="form" id="form-login" onsubmit="doLogin(event)">
+      <div class="field">
+        <label>Pseudo ou Email</label>
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <input type="text" id="login-user" placeholder="votre_pseudo" autocomplete="username" required/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Mot de passe</label>
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password" required/>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" id="btn-login">Se connecter</button>
+    </form>
+
+    <!-- Register form -->
+    <form class="form" id="form-register" style="display:none" onsubmit="doRegister(event)">
+      <div class="field">
+        <label>Pseudo</label>
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <input type="text" id="reg-user" placeholder="votre_pseudo" autocomplete="username" required/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <input type="email" id="reg-email" placeholder="vous@exemple.fr" autocomplete="email" required/>
+        </div>
+      </div>
+      <div class="field">
+        <label>Mot de passe</label>
+        <div class="input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input type="password" id="reg-pass" placeholder="6 caractères minimum" autocomplete="new-password" required/>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" id="btn-register">Créer mon compte</button>
+    </form>
+  </div>
+</div>
+
+<div class="stats-badge">
+  <div class="stats-dot"></div>
+  <span id="stats-text">Chargement…</span>
+</div>
+
+<script>
+// ── Canvas particle background ────────────────────────────────
+const canvas = document.getElementById('bg');
+const ctx    = canvas.getContext('2d');
+let W, H, particles = [];
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+function rand(a, b) { return a + Math.random() * (b - a); }
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x  = rand(0, W); this.y = rand(0, H);
+    this.vx = rand(-0.3, 0.3); this.vy = rand(-0.5, -0.1);
+    this.r  = rand(0.5, 2);
+    this.life = rand(0.3, 1);
+    this.decay = rand(0.002, 0.005);
+    this.hue = rand(200, 230);
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy;
+    this.life -= this.decay;
+    if (this.life <= 0 || this.y < -10) this.reset();
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.fillStyle = `hsla(${this.hue},80%,70%,${this.life})`;
+    ctx.fill();
+  }
+}
+
+for (let i = 0; i < 120; i++) particles.push(new Particle());
+
+function drawConnections() {
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const d  = Math.sqrt(dx*dx + dy*dy);
+      if (d < 100) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(97,161,240,${(1 - d/100) * 0.08})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function animate() {
+  ctx.fillStyle = 'rgba(6,9,19,0.15)';
+  ctx.fillRect(0, 0, W, H);
+  drawConnections();
+  particles.forEach(p => { p.update(); p.draw(); });
+  requestAnimationFrame(animate);
+}
+animate();
+
+// ── Tabs ──────────────────────────────────────────────────────
+function showTab(tab) {
+  document.getElementById('form-login').style.display    = tab === 'login'    ? 'flex' : 'none';
+  document.getElementById('form-register').style.display = tab === 'register' ? 'flex' : 'none';
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  hideMsg();
+}
+
+function showMsg(text, type = 'error') {
+  const el = document.getElementById('msg');
+  el.textContent = text;
+  el.className = `msg ${type} visible`;
+}
+function hideMsg() {
+  document.getElementById('msg').className = 'msg';
+}
+
+// ── Login ─────────────────────────────────────────────────────
+async function doLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true; btn.textContent = 'Connexion…';
+  hideMsg();
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById('login-user').value,
+        password: document.getElementById('login-pass').value,
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) return showMsg(d.error);
+    window.location.href = d.redirect;
+  } catch {
+    showMsg('Erreur réseau');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Se connecter';
+  }
+}
+
+// ── Register ──────────────────────────────────────────────────
+async function doRegister(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btn-register');
+  btn.disabled = true; btn.textContent = 'Création…';
+  hideMsg();
+  try {
+    const r = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: document.getElementById('reg-user').value,
+        email:    document.getElementById('reg-email').value,
+        password: document.getElementById('reg-pass').value,
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) return showMsg(d.error);
+    window.location.href = d.redirect;
+  } catch {
+    showMsg('Erreur réseau');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Créer mon compte';
+  }
+}
+
+// ── Stats ─────────────────────────────────────────────────────
+fetch('/api/stats').then(r => r.json()).then(d => {
+  function fmt(n) {
+    if (n >= 1e9) return (n/1e9).toFixed(1) + 'G';
+    if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return (n/1e3).toFixed(0) + 'K';
+    return n;
+  }
+  document.getElementById('stats-text').textContent =
+    d.total_rows > 0
+      ? `${fmt(d.total_rows)} entrées • ${d.files_count} bases`
+      : `${d.files_count} bases actives`;
+}).catch(() => {});
+
+// Check if already logged in
+fetch('/api/me').then(r => r.json()).then(d => {
+  if (d.user) window.location.href = d.user.is_admin ? '/admin' : '/search';
+});
+</script>
+</body>
+</html>

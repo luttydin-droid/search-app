@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NEXUS — Mon historique</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060913;--blue:#61A1F0;--cyan:#00d4ff;--purple:#a855f7;
+  --green:#3fb950;--red:#f85149;--orange:#f0a040;
+  --glass:rgba(255,255,255,0.04);--glass-border:rgba(97,161,240,0.15);
+  --text:#e2eaff;--muted:#6b7fa3;--sidebar:220px;
+}
+html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+canvas#bg{position:fixed;inset:0;z-index:0}
+.grid{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:linear-gradient(rgba(97,161,240,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(97,161,240,0.025) 1px,transparent 1px);
+  background-size:60px 60px}
+.layout{position:relative;z-index:10;display:flex;height:100vh}
+
+/* Sidebar */
+.sidebar{width:var(--sidebar);flex-shrink:0;padding:20px 0;display:flex;flex-direction:column;border-right:1px solid rgba(97,161,240,0.08);background:rgba(6,9,19,0.6);backdrop-filter:blur(20px)}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:0 20px 24px}
+.logo-mark{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(97,161,240,0.4)}
+.logo-mark svg{width:15px;height:15px}
+.logo-text{font-size:15px;font-weight:700}.logo-text span{color:var(--blue)}
+.nav{display:flex;flex-direction:column;gap:2px;padding:0 10px;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);transition:all .15s;text-decoration:none;border:none;background:none;width:100%;text-align:left}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
+.nav-item:hover{background:rgba(97,161,240,0.07);color:var(--text)}
+.nav-item.active{background:rgba(97,161,240,0.12);color:var(--blue)}
+.nav-sep{height:1px;background:rgba(97,161,240,0.08);margin:8px 10px}
+.sidebar-bottom{padding:10px 10px 0}
+.user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,0.2);border-radius:10px;border:1px solid rgba(97,161,240,0.08)}
+.user-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-sub{font-size:10px;color:var(--muted)}.user-sub.active{color:var(--green)}
+.logout-btn{background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;display:flex;align-items:center;transition:color .15s}
+.logout-btn:hover{color:var(--red)}.logout-btn svg{width:14px;height:14px}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.header{display:flex;align-items:center;gap:14px;padding:16px 24px;border-bottom:1px solid rgba(97,161,240,0.08);background:rgba(6,9,19,0.4);backdrop-filter:blur(12px);flex-shrink:0}
+.header-title{font-size:15px;font-weight:700;flex:1}
+.btn{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 14px;border:none;border-radius:9px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all .15s}
+.btn svg{width:13px;height:13px}
+.btn-danger{background:rgba(248,81,73,0.1);border:1px solid rgba(248,81,73,0.2);color:var(--red)}
+.btn-danger:hover{background:rgba(248,81,73,0.2)}
+.btn-ghost{background:rgba(97,161,240,0.06);border:1px solid rgba(97,161,240,0.12);color:var(--muted)}
+.btn-ghost:hover{color:var(--text)}
+
+/* Content */
+.content{flex:1;overflow-y:auto;padding:24px}
+.content::-webkit-scrollbar{width:4px}
+.content::-webkit-scrollbar-thumb{background:rgba(97,161,240,0.2);border-radius:2px}
+
+/* Empty */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted);padding:60px;text-align:center;height:60%}
+.empty svg{width:48px;height:48px;opacity:.2}
+.empty p{font-size:13px;line-height:1.6;max-width:260px}
+
+/* History list */
+.history-list{display:flex;flex-direction:column;gap:8px}
+.history-item{
+  display:flex;align-items:flex-start;gap:14px;padding:14px 16px;
+  background:rgba(0,0,0,0.2);border:1px solid rgba(97,161,240,0.07);
+  border-radius:12px;transition:border-color .15s,background .15s;
+  animation:fadeIn .2s ease both;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.history-item:hover{border-color:rgba(97,161,240,0.15);background:rgba(97,161,240,0.03)}
+.hist-icon{width:34px;height:34px;border-radius:9px;background:rgba(97,161,240,0.08);border:1px solid rgba(97,161,240,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hist-icon svg{width:14px;height:14px;color:var(--blue)}
+.hist-body{flex:1;min-width:0}
+.hist-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px}
+.hist-tag{
+  display:inline-flex;align-items:center;gap:4px;padding:3px 8px;
+  border-radius:6px;font-size:11px;font-weight:500;
+}
+.hist-tag.identity{background:rgba(97,161,240,0.1);border:1px solid rgba(97,161,240,0.2);color:var(--blue)}
+.hist-tag.contact{background:rgba(0,212,255,0.08);border:1px solid rgba(0,212,255,0.2);color:var(--cyan)}
+.hist-tag.finance{background:rgba(63,185,80,0.08);border:1px solid rgba(63,185,80,0.2);color:var(--green)}
+.hist-tag.digital{background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);color:var(--purple)}
+.hist-tag.rep{background:rgba(240,160,64,0.08);border:1px solid rgba(240,160,64,0.2);color:var(--orange)}
+.hist-tag.general{background:rgba(107,127,163,0.08);border:1px solid rgba(107,127,163,0.15);color:var(--muted)}
+.hist-tag-label{opacity:.65;font-size:9px;text-transform:uppercase;letter-spacing:.3px}
+.hist-tag-val{font-weight:700;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.hist-meta{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--muted)}
+.hist-results{display:flex;align-items:center;gap:4px;color:var(--blue)}
+.hist-results svg{width:11px;height:11px}
+.hist-date{margin-left:auto}
+.hist-del{background:none;border:none;cursor:pointer;color:var(--muted);padding:4px;border-radius:5px;display:flex;align-items:center;opacity:.5;transition:all .15s;flex-shrink:0;margin-top:2px}
+.hist-del:hover{opacity:1;color:var(--red);background:rgba(248,81,73,0.1)}
+.hist-del svg{width:13px;height:13px}
+
+.count-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.count-text{font-size:12px;color:var(--muted)}
+.count-text span{color:var(--text);font-weight:600}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="grid"></div>
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+      <span class="logo-text">NEX<span>US</span></span>
+    </div>
+    <nav class="nav">
+      <a class="nav-item" href="/search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Recherche
+      </a>
+      <a class="nav-item active" href="/history">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3 3 3 7 7 7"/></svg>Historique
+      </a>
+      <a class="nav-item" href="/settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Paramètres
+      </a>
+      <a class="nav-item" href="/activate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Abonnement
+      </a>
+      <div class="nav-sep"></div>
+      <a class="nav-item" id="admin-link" href="/admin" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Administration
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="user-card">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name">—</div>
+          <div class="user-sub" id="user-sub">…</div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="header">
+      <span class="header-title">Mon historique de recherche</span>
+      <button class="btn btn-danger" id="btn-clear-all" onclick="clearAll()" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
+        Tout effacer
+      </button>
+      <button class="btn btn-ghost" onclick="load()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.63-5.85"/></svg>
+        Actualiser
+      </button>
+    </div>
+
+    <div class="content" id="content">
+      <div class="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3 3 3 7 7 7"/></svg>
+        <p>Chargement de l'historique…</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+// Canvas
+const canvas=document.getElementById('bg'),ctx=canvas.getContext('2d');
+let W,H,particles=[];
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+resize();window.addEventListener('resize',resize);
+function rand(a,b){return a+Math.random()*(b-a)}
+class Particle{constructor(){this.reset()}reset(){this.x=rand(0,W);this.y=rand(0,H);this.vx=rand(-.2,.2);this.vy=rand(-.4,-.05);this.r=rand(.5,1.5);this.life=rand(.2,.7);this.decay=rand(.001,.003);this.hue=rand(200,230)}update(){this.x+=this.vx;this.y+=this.vy;this.life-=this.decay;if(this.life<=0||this.y<-10)this.reset()}draw(){ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fillStyle=`hsla(${this.hue},80%,70%,${this.life})`;ctx.fill()}}
+for(let i=0;i<60;i++)particles.push(new Particle());
+function animate(){ctx.fillStyle='rgba(6,9,19,0.12)';ctx.fillRect(0,0,W,H);particles.forEach(p=>{p.update();p.draw()});requestAnimationFrame(animate)}
+animate();
+
+// Field meta
+const FIELD_META = {
+  last_name:{label:'Nom',cat:'identity'},first_name:{label:'Prénom',cat:'identity'},
+  gender:{label:'Genre',cat:'identity'},date_of_born:{label:'Naissance',cat:'identity'},
+  nir:{label:'NIR',cat:'identity'},email:{label:'Email',cat:'contact'},
+  phone:{label:'Téléphone',cat:'contact'},address:{label:'Adresse',cat:'contact'},
+  postal_code:{label:'Code postal',cat:'contact'},city:{label:'Ville',cat:'contact'},
+  iban:{label:'IBAN',cat:'finance'},bic:{label:'BIC',cat:'finance'},
+  username:{label:'Username',cat:'digital'},ip_address:{label:'IP',cat:'digital'},
+  discord_id:{label:'Discord',cat:'digital'},vehicule_imatriculation:{label:'Immat.',cat:'digital'},
+  representative_last_name:{label:'Rép. Nom',cat:'rep'},representative_first_name:{label:'Rép. Prénom',cat:'rep'},
+  representative_email:{label:'Rép. Email',cat:'rep'},representative_phone:{label:'Rép. Tél.',cat:'rep'},
+};
+
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmtDate(d){if(!d)return'—';return new Date(d.endsWith('Z')?d:d+'Z').toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+
+let history=[];
+async function load(){
+  const r=await fetch('/api/user/history');
+  history=await r.json();
+  render();
+}
+
+function render(){
+  const content=document.getElementById('content');
+  const clearBtn=document.getElementById('btn-clear-all');
+
+  if(!history.length){
+    clearBtn.style.display='none';
+    content.innerHTML=`<div class="empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3 3 3 7 7 7"/></svg>
+      <p>Votre historique de recherche est vide.<br>Effectuez des recherches pour les voir apparaître ici.</p>
+    </div>`;
+    return;
+  }
+
+  clearBtn.style.display='flex';
+  content.innerHTML=`
+    <div class="count-bar">
+      <span class="count-text"><span>${history.length}</span> recherche${history.length>1?'s':''}</span>
+    </div>
+    <div class="history-list" id="hist-list"></div>`;
+
+  const list=document.getElementById('hist-list');
+  history.forEach(h=>{
+    const item=document.createElement('div');
+    item.className='history-item';
+    item.id='hist-'+h.id;
+
+    // Build tags from query + filters
+    const tags=[];
+    if(h.query) tags.push({label:'Recherche',val:h.query,cat:'general'});
+    if(h.filters){
+      try {
+        const f=JSON.parse(h.filters);
+        Object.entries(f).forEach(([k,v])=>{
+          if(v){const m=FIELD_META[k];tags.push({label:m?m.label:k,val:v,cat:m?m.cat:'general'})}
+        });
+      } catch{}
+    }
+
+    item.innerHTML=`
+      <div class="hist-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+      <div class="hist-body">
+        <div class="hist-tags">${tags.map(t=>`
+          <div class="hist-tag ${esc(t.cat)}">
+            <span class="hist-tag-label">${esc(t.label)}</span>
+            <span class="hist-tag-val">${esc(t.val)}</span>
+          </div>`).join('')}</div>
+        <div class="hist-meta">
+          ${h.results_count!=null?`<span class="hist-results"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>${h.results_count} résultat${h.results_count>1?'s':''}</span>`:''}
+          <span class="hist-date">${fmtDate(h.searched_at)}</span>
+        </div>
+      </div>
+      <button class="hist-del" onclick="deleteEntry(${h.id})" title="Supprimer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </button>`;
+    list.appendChild(item);
+  });
+}
+
+async function deleteEntry(id){
+  const el=document.getElementById('hist-'+id);
+  if(el){el.style.opacity='.4';el.style.pointerEvents='none'}
+  await fetch(`/api/user/history/${id}`,{method:'DELETE'});
+  history=history.filter(h=>h.id!==id);
+  render();
+}
+
+async function clearAll(){
+  if(!confirm(`Effacer vos ${history.length} entrée(s) d'historique ?`))return;
+  await fetch('/api/user/history',{method:'DELETE'});
+  history=[];
+  render();
+}
+
+fetch('/api/me').then(r=>r.json()).then(d=>{
+  if(!d.user){window.location.href='/login';return}
+  const u=d.user;
+  document.getElementById('user-name').textContent=u.username;
+  document.getElementById('user-avatar').textContent=u.username[0].toUpperCase();
+  if(u.is_admin){document.getElementById('user-sub').textContent='Administrateur';document.getElementById('user-sub').classList.add('active');document.getElementById('admin-link').style.display='flex'}
+  else if(u.subscribed){const exp=new Date(u.subscription_expires_at+'Z');const days=Math.ceil((exp-Date.now())/86400000);document.getElementById('user-sub').textContent=`Actif • ${days}j`;document.getElementById('user-sub').classList.add('active')}
+  else document.getElementById('user-sub').textContent='Aucun abonnement';
+});
+async function doLogout(){await fetch('/api/auth/logout',{method:'POST'});window.location.href='/login'}
+load();
+</script>
+</body>
+</html>

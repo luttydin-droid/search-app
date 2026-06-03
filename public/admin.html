@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>NEXUS — Administration</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060913;
+  --blue:#61A1F0;
+  --cyan:#00d4ff;
+  --purple:#a855f7;
+  --green:#3fb950;
+  --red:#f85149;
+  --orange:#f0a040;
+  --glass:rgba(255,255,255,0.04);
+  --glass-border:rgba(97,161,240,0.15);
+  --text:#e2eaff;
+  --muted:#6b7fa3;
+  --sidebar:220px;
+}
+html,body{height:100%;font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+canvas#bg{position:fixed;inset:0;z-index:0}
+.grid{position:fixed;inset:0;z-index:1;pointer-events:none;background-image:linear-gradient(rgba(97,161,240,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(97,161,240,0.025) 1px,transparent 1px);background-size:60px 60px}
+
+.layout{position:relative;z-index:10;display:flex;height:100vh}
+
+/* Sidebar */
+.sidebar{width:var(--sidebar);flex-shrink:0;padding:20px 0;display:flex;flex-direction:column;border-right:1px solid rgba(97,161,240,0.08);background:rgba(6,9,19,0.6);backdrop-filter:blur(20px)}
+.sidebar-logo{display:flex;align-items:center;gap:10px;padding:0 20px 24px}
+.logo-mark{width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--blue),var(--cyan));display:flex;align-items:center;justify-content:center;box-shadow:0 0 16px rgba(97,161,240,0.4)}
+.logo-mark svg{width:15px;height:15px}
+.logo-text{font-size:15px;font-weight:700}.logo-text span{color:var(--blue)}
+.nav{display:flex;flex-direction:column;gap:2px;padding:0 10px;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);transition:all .15s;text-decoration:none;border:none;background:none;width:100%;text-align:left}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
+.nav-item:hover{background:rgba(97,161,240,0.07);color:var(--text)}
+.nav-item.active{background:rgba(97,161,240,0.12);color:var(--blue)}
+.nav-sep{height:1px;background:rgba(97,161,240,0.08);margin:8px 10px}
+.sidebar-bottom{padding:10px 10px 0}
+.user-card{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,0,0,0.2);border-radius:10px;border:1px solid rgba(97,161,240,0.08)}
+.user-avatar{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.user-info{flex:1;min-width:0}
+.user-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:10px;color:var(--orange)}
+.logout-btn{background:none;border:none;cursor:pointer;color:var(--muted);padding:2px;border-radius:4px;display:flex;align-items:center;transition:color .15s}
+.logout-btn:hover{color:var(--red)}
+.logout-btn svg{width:14px;height:14px}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.header{display:flex;align-items:center;gap:16px;padding:16px 24px;border-bottom:1px solid rgba(97,161,240,0.08);background:rgba(6,9,19,0.4);backdrop-filter:blur(12px);flex-shrink:0}
+.header-title{font-size:15px;font-weight:700}
+.admin-badge{display:flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(240,160,64,0.1);border:1px solid rgba(240,160,64,0.25);border-radius:6px;font-size:11px;color:var(--orange);font-weight:600;margin-left:auto}
+
+/* Tabs */
+.tabs-bar{display:flex;gap:0;padding:0 24px;border-bottom:1px solid rgba(97,161,240,0.08);flex-shrink:0;overflow-x:auto}
+.tab-btn{display:flex;align-items:center;gap:8px;padding:12px 16px;border:none;background:none;color:var(--muted);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;white-space:nowrap}
+.tab-btn svg{width:14px;height:14px}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+/* Content */
+.content{flex:1;overflow-y:auto;padding:24px}
+.content::-webkit-scrollbar{width:4px}
+.content::-webkit-scrollbar-thumb{background:rgba(97,161,240,0.2);border-radius:2px}
+
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+
+/* Section */
+.section{margin-bottom:28px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px}
+.section-title svg{width:15px;height:15px;color:var(--blue)}
+.section-sub{font-size:12px;color:var(--muted);margin-top:2px}
+
+/* Stats row */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.stat-card{background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;padding:16px 18px}
+.stat-val{font-size:24px;font-weight:800;line-height:1;margin-bottom:4px}
+.stat-val.blue{color:var(--blue)}.stat-val.green{color:var(--green)}.stat-val.orange{color:var(--orange)}.stat-val.red{color:var(--red)}.stat-val.purple{color:var(--purple)}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+
+/* Table */
+.table-wrap{background:var(--glass);border:1px solid var(--glass-border);border-radius:14px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 14px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;text-align:left;border-bottom:1px solid rgba(97,161,240,0.08);font-weight:600;background:rgba(0,0,0,0.15)}
+td{padding:10px 14px;font-size:12px;border-bottom:1px solid rgba(97,161,240,0.05);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(97,161,240,0.03)}
+.td-mono{font-family:'Courier New',monospace;font-size:11px;color:var(--muted)}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:700}
+.badge-green{background:rgba(63,185,80,0.12);border:1px solid rgba(63,185,80,0.25);color:var(--green)}
+.badge-red{background:rgba(248,81,73,0.1);border:1px solid rgba(248,81,73,0.25);color:var(--red)}
+.badge-orange{background:rgba(240,160,64,0.1);border:1px solid rgba(240,160,64,0.25);color:var(--orange)}
+.badge-blue{background:rgba(97,161,240,0.1);border:1px solid rgba(97,161,240,0.25);color:var(--blue)}
+.badge-muted{background:rgba(107,127,163,0.1);border:1px solid rgba(107,127,163,0.2);color:var(--muted)}
+.badge-dot{width:5px;height:5px;border-radius:50%;background:currentColor}
+
+/* Buttons */
+.btn{height:32px;padding:0 12px;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-sm{height:28px;padding:0 10px;font-size:11px;border-radius:6px}
+.btn-primary{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff}
+.btn-primary:hover{opacity:.9}
+.btn-danger{background:rgba(248,81,73,0.12);border:1px solid rgba(248,81,73,0.25);color:var(--red)}
+.btn-danger:hover{background:rgba(248,81,73,0.2)}
+.btn-success{background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.25);color:var(--green)}
+.btn-success:hover{background:rgba(63,185,80,0.18)}
+.btn-ghost{background:rgba(97,161,240,0.06);border:1px solid rgba(97,161,240,0.12);color:var(--muted)}
+.btn-ghost:hover{color:var(--text)}
+.btn-orange{background:rgba(240,160,64,0.1);border:1px solid rgba(240,160,64,0.25);color:var(--orange)}
+.btn-orange:hover{background:rgba(240,160,64,0.18)}
+.btn svg{width:12px;height:12px}
+
+/* Form row */
+.form-row{display:flex;gap:10px;align-items:flex-end;margin-bottom:14px;flex-wrap:wrap}
+.form-group{display:flex;flex-direction:column;gap:5px;flex:1;min-width:120px}
+.form-group label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.form-input{height:36px;padding:0 12px;background:rgba(0,0,0,0.35);border:1px solid rgba(97,161,240,0.15);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;outline:none;transition:border-color .2s}
+.form-input:focus{border-color:var(--blue)}
+.form-input::placeholder{color:#2d3f5c}
+.form-select{height:36px;padding:0 10px;background:rgba(0,0,0,0.35);border:1px solid rgba(97,161,240,0.15);border-radius:8px;color:var(--text);font-family:inherit;font-size:13px;outline:none;cursor:pointer}
+.form-select:focus{border-color:var(--blue)}
+
+/* Gift code display */
+.code-display{
+  font-family:'Courier New',monospace;font-size:18px;font-weight:700;
+  letter-spacing:3px;padding:10px 16px;
+  background:rgba(0,0,0,0.4);border:1px solid rgba(63,185,80,0.3);
+  border-radius:10px;color:var(--green);display:inline-block;
+  cursor:pointer;user-select:all;
+}
+.code-display:hover{background:rgba(63,185,80,0.06)}
+.code-tip{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:100;display:none;align-items:center;justify-content:center}
+.modal-overlay.visible{display:flex}
+.modal{background:#0d1526;border:1px solid var(--glass-border);border-radius:16px;padding:28px;width:100%;max-width:420px;animation:modalIn .2s ease}
+@keyframes modalIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+
+/* Msg */
+.msg{padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:12px;display:none}
+.msg.error{background:rgba(248,81,73,0.1);border:1px solid rgba(248,81,73,0.3);color:var(--red)}
+.msg.success{background:rgba(63,185,80,0.1);border:1px solid rgba(63,185,80,0.3);color:var(--green)}
+.msg.visible{display:block}
+
+/* Search input */
+.search-filter{height:34px;padding:0 12px 0 34px;background:rgba(0,0,0,0.3);border:1px solid rgba(97,161,240,0.1);border-radius:8px;color:var(--text);font-family:inherit;font-size:12px;outline:none;min-width:200px;transition:border-color .2s}
+.search-filter:focus{border-color:rgba(97,161,240,0.3)}
+.search-filter-wrap{position:relative;display:inline-flex;align-items:center}
+.search-filter-wrap svg{position:absolute;left:10px;color:var(--muted);width:13px;height:13px;pointer-events:none}
+
+.empty-row td{text-align:center;color:var(--muted);padding:32px;font-size:13px}
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+<div class="grid"></div>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </div>
+      <span class="logo-text">NEX<span>US</span></span>
+    </div>
+    <nav class="nav">
+      <a class="nav-item" href="/search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Recherche
+      </a>
+      <div class="nav-sep"></div>
+      <a class="nav-item active" href="/admin">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Administration
+      </a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="user-card">
+        <div class="user-avatar">A</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name">Admin</div>
+          <div class="user-role">Administrateur</div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="header">
+      <span class="header-title">Panneau d'administration</span>
+      <div class="admin-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        ADMIN
+      </div>
+    </div>
+
+    <div class="tabs-bar">
+      <button class="tab-btn active" onclick="showTab('overview')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Vue d'ensemble
+      </button>
+      <button class="tab-btn" onclick="showTab('users')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Utilisateurs
+      </button>
+      <button class="tab-btn" onclick="showTab('gifts')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg>
+        Cartes cadeaux
+      </button>
+      <button class="tab-btn" onclick="showTab('databases')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+        Bases de données
+      </button>
+      <button class="tab-btn" onclick="showTab('history')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3 3 3 7 7 7"/></svg>
+        Historique
+      </button>
+    </div>
+
+    <div class="content">
+
+      <!-- Overview -->
+      <div class="tab-panel active" id="panel-overview">
+        <div class="stats-row" id="overview-stats">
+          <div class="stat-card"><div class="stat-val blue" id="ov-rows">…</div><div class="stat-label">Entrées totales</div></div>
+          <div class="stat-card"><div class="stat-val blue" id="ov-dbs">…</div><div class="stat-label">Bases actives</div></div>
+          <div class="stat-card"><div class="stat-val green" id="ov-users">…</div><div class="stat-label">Utilisateurs</div></div>
+          <div class="stat-card"><div class="stat-val orange" id="ov-gifts">…</div><div class="stat-label">Cartes générées</div></div>
+          <div class="stat-card"><div class="stat-val purple" id="ov-searches">…</div><div class="stat-label">Recherches</div></div>
+          <div class="stat-card"><div class="stat-val red" id="ov-banned">…</div><div class="stat-label">Bannis</div></div>
+        </div>
+
+        <div class="section">
+          <div class="section-header"><div class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3 3 3 7 7 7"/></svg>Dernières recherches</div></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Utilisateur</th><th>Requête</th><th>Résultats</th><th>Date</th></tr></thead>
+              <tbody id="recent-history"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Users -->
+      <div class="tab-panel" id="panel-users">
+        <div class="section">
+          <div class="section-header">
+            <div>
+              <div class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Utilisateurs</div>
+            </div>
+            <div class="search-filter-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="search-filter" type="text" placeholder="Filtrer…" oninput="filterUsers(this.value)"/>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Pseudo</th><th>Email</th><th>Statut</th><th>Abonnement</th><th>Inscrit le</th><th>Actions</th></tr></thead>
+              <tbody id="users-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gift cards -->
+      <div class="tab-panel" id="panel-gifts">
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Générer une carte cadeau</div>
+          </div>
+          <div id="gift-msg" class="msg"></div>
+          <div class="form-row">
+            <div class="form-group" style="max-width:180px">
+              <label>Durée (jours)</label>
+              <input class="form-input" type="number" id="gift-days" value="30" min="1" max="3650"/>
+            </div>
+            <div class="form-group" style="max-width:220px">
+              <label>Libellé (optionnel)</label>
+              <input class="form-input" type="text" id="gift-label" placeholder="ex: Offre 1 mois"/>
+            </div>
+            <div class="form-group" style="max-width:120px">
+              <label>Quantité</label>
+              <input class="form-input" type="number" id="gift-qty" value="1" min="1" max="50"/>
+            </div>
+            <button class="btn btn-primary" onclick="generateGifts()" style="height:36px;margin-top:auto">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Générer
+            </button>
+          </div>
+          <!-- Generated codes display -->
+          <div id="new-codes" style="margin-bottom:16px;display:none">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Codes générés</div>
+            <div id="new-codes-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>Toutes les cartes</div>
+            <button class="btn btn-ghost btn-sm" onclick="loadGifts()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.63-5.85"/></svg>
+              Actualiser
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Code</th><th>Durée</th><th>Libellé</th><th>Statut</th><th>Utilisé par</th><th>Date</th><th></th></tr></thead>
+              <tbody id="gifts-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Databases -->
+      <div class="tab-panel" id="panel-databases">
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>Bases de données indexées</div>
+            <button class="btn btn-ghost btn-sm" onclick="loadDatabases()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.63-5.85"/></svg>
+              Actualiser
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Fichier</th><th>Taille</th><th>Modifié</th><th>Actions</th></tr></thead>
+              <tbody id="db-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- History -->
+      <div class="tab-panel" id="panel-history">
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/><polyline points="3 3 3 7 7 7"/></svg>Historique global des recherches</div>
+            <div style="display:flex;gap:8px">
+              <div class="search-filter-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input class="search-filter" type="text" placeholder="Filtrer…" oninput="filterHistory(this.value)"/>
+              </div>
+              <button class="btn btn-ghost btn-sm" onclick="loadHistory()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.63-5.85"/></svg>
+                Actualiser
+              </button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Utilisateur</th><th>Requête</th><th>Filtres</th><th>Résultats</th><th>Date</th></tr></thead>
+              <tbody id="history-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div>
+</div>
+
+<!-- Ban modal -->
+<div class="modal-overlay" id="ban-modal">
+  <div class="modal">
+    <div class="modal-title">Bannir l'utilisateur</div>
+    <p class="modal-sub">Indiquez une raison pour le bannissement. L'utilisateur ne pourra plus se connecter.</p>
+    <input class="form-input" type="text" id="ban-reason" placeholder="Raison du bannissement…" style="width:100%"/>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('ban-modal')">Annuler</button>
+      <button class="btn btn-danger" onclick="confirmBan()">Bannir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sub modal -->
+<div class="modal-overlay" id="sub-modal">
+  <div class="modal">
+    <div class="modal-title">Modifier l'abonnement</div>
+    <p class="modal-sub" id="sub-modal-sub"></p>
+    <div class="form-group" style="margin-bottom:4px">
+      <label>Durée à ajouter (jours)</label>
+      <input class="form-input" type="number" id="sub-days" value="30" min="1" max="3650" style="width:100%"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('sub-modal')">Annuler</button>
+      <button class="btn btn-danger btn-sm" onclick="confirmClearSub()" id="btn-clear-sub">Résilier</button>
+      <button class="btn btn-success" onclick="confirmSetSub()">Appliquer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Canvas
+const canvas=document.getElementById('bg'),ctx=canvas.getContext('2d');
+let W,H,particles=[];
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight}
+resize();window.addEventListener('resize',resize);
+function rand(a,b){return a+Math.random()*(b-a)}
+class Particle{constructor(){this.reset()}reset(){this.x=rand(0,W);this.y=rand(0,H);this.vx=rand(-.2,.2);this.vy=rand(-.4,-.05);this.r=rand(.5,1.5);this.life=rand(.2,.7);this.decay=rand(.001,.003);this.hue=rand(200,230)}update(){this.x+=this.vx;this.y+=this.vy;this.life-=this.decay;if(this.life<=0||this.y<-10)this.reset()}draw(){ctx.beginPath();ctx.arc(this.x,this.y,this.r,0,Math.PI*2);ctx.fillStyle=`hsla(${this.hue},80%,70%,${this.life})`;ctx.fill()}}
+for(let i=0;i<60;i++)particles.push(new Particle());
+function animate(){ctx.fillStyle='rgba(6,9,19,0.12)';ctx.fillRect(0,0,W,H);particles.forEach(p=>{p.update();p.draw()});requestAnimationFrame(animate)}
+animate();
+
+// ── Tabs ──────────────────────────────────────────────────────
+const TABS=['overview','users','gifts','databases','history'];
+function showTab(t){
+  TABS.forEach(id=>{
+    document.getElementById('panel-'+id).classList.toggle('active',id===t);
+    document.querySelectorAll('.tab-btn')[TABS.indexOf(id)].classList.toggle('active',id===t);
+  });
+  if(t==='users')loadUsers();
+  else if(t==='gifts')loadGifts();
+  else if(t==='databases')loadDatabases();
+  else if(t==='history')loadHistory();
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmt(n){if(n>=1e9)return(n/1e9).toFixed(1)+'G';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return Math.round(n/1e3)+'K';return n}
+function fmtDate(d){if(!d)return'—';return new Date(d.endsWith('Z')?d:d+'Z').toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+function fmtDateShort(d){if(!d)return'—';return new Date(d.endsWith('Z')?d:d+'Z').toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})}
+
+async function api(method,url,body){
+  const r=await fetch(url,{method,headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
+  return r.json();
+}
+
+// ── Auth ──────────────────────────────────────────────────────
+fetch('/api/me').then(r=>r.json()).then(d=>{
+  if(!d.user){window.location.href='/login';return}
+  if(!d.user.is_admin){window.location.href='/search';return}
+  document.getElementById('user-name').textContent=d.user.username;
+  loadOverview();
+});
+async function doLogout(){await fetch('/api/auth/logout',{method:'POST'});window.location.href='/login'}
+
+// ── Overview ──────────────────────────────────────────────────
+async function loadOverview(){
+  const [stats,users,gifts,hist]=await Promise.all([
+    fetch('/api/stats').then(r=>r.json()).catch(()=>({})),
+    fetch('/api/admin/users').then(r=>r.json()).catch(()=>[]),
+    fetch('/api/admin/giftcards').then(r=>r.json()).catch(()=>[]),
+    fetch('/api/admin/history').then(r=>r.json()).catch(()=>[]),
+  ]);
+  const u=Array.isArray(users)?users:[];
+  const g=Array.isArray(gifts)?gifts:[];
+  const h=Array.isArray(hist)?hist:[];
+  document.getElementById('ov-rows').textContent=fmt(stats.total_rows||0);
+  document.getElementById('ov-dbs').textContent=stats.files_count||0;
+  document.getElementById('ov-users').textContent=u.length;
+  document.getElementById('ov-gifts').textContent=g.length;
+  document.getElementById('ov-searches').textContent=h.length;
+  document.getElementById('ov-banned').textContent=u.filter(x=>x.is_banned).length;
+
+  const tbody=document.getElementById('recent-history');
+  const recent=(hist||[]).slice(0,10);
+  if(!recent.length){tbody.innerHTML='<tr class="empty-row"><td colspan="4">Aucune recherche</td></tr>';return}
+  tbody.innerHTML=recent.map(h=>`
+    <tr>
+      <td><span class="badge badge-blue">${esc(h.username)}</span></td>
+      <td style="font-family:monospace;font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(h.query)}</td>
+      <td>${h.results_count??'—'}</td>
+      <td class="td-mono">${fmtDate(h.searched_at)}</td>
+    </tr>`).join('');
+}
+
+// ── Users ─────────────────────────────────────────────────────
+let allUsers=[];
+async function loadUsers(){
+  allUsers=await fetch('/api/admin/users').then(r=>r.json());
+  renderUsers(allUsers);
+}
+function filterUsers(q){
+  const f=q.toLowerCase();
+  renderUsers(allUsers.filter(u=>u.username.toLowerCase().includes(f)||u.email.toLowerCase().includes(f)));
+}
+function renderUsers(list){
+  const tbody=document.getElementById('users-tbody');
+  if(!list.length){tbody.innerHTML='<tr class="empty-row"><td colspan="7">Aucun utilisateur</td></tr>';return}
+  tbody.innerHTML=list.map(u=>{
+    const subLabel=u.is_admin?'<span class="badge badge-orange">Admin</span>':
+      u.subscription_expires_at&&new Date(u.subscription_expires_at+'Z')>new Date()?
+        `<span class="badge badge-green"><span class="badge-dot"></span>Actif</span>`:
+        '<span class="badge badge-muted">Aucun</span>';
+    const statusLabel=u.is_banned?'<span class="badge badge-red">Banni</span>':'<span class="badge badge-green"><span class="badge-dot"></span>Actif</span>';
+    const expiry=u.subscription_expires_at?fmtDateShort(u.subscription_expires_at):'—';
+    const actions=u.is_admin?'<span style="font-size:11px;color:var(--muted)">—</span>':`
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        ${u.is_banned
+          ?`<button class="btn btn-success btn-sm" onclick="unbanUser(${u.id})">Débannir</button>`
+          :`<button class="btn btn-danger btn-sm" onclick="openBanModal(${u.id},'${esc(u.username)}')">Bannir</button>`}
+        <button class="btn btn-orange btn-sm" onclick="openSubModal(${u.id},'${esc(u.username)}','${u.subscription_expires_at||''}')">Abonnement</button>
+        <button class="btn btn-ghost btn-sm" onclick="viewUserHistory(${u.id},'${esc(u.username)}')">Historique</button>
+      </div>`;
+    return`<tr>
+      <td class="td-mono">${u.id}</td>
+      <td><strong>${esc(u.username)}</strong></td>
+      <td class="td-mono">${esc(u.email)}</td>
+      <td>${statusLabel}</td>
+      <td>${subLabel} <span style="font-size:10px;color:var(--muted)">${expiry}</span></td>
+      <td class="td-mono">${fmtDateShort(u.created_at)}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+// Ban
+let pendingBanId=null;
+function openBanModal(id,name){
+  pendingBanId=id;
+  document.getElementById('ban-reason').value='';
+  document.querySelector('#ban-modal .modal-sub').textContent=`Utilisateur : ${name}`;
+  document.getElementById('ban-modal').classList.add('visible');
+}
+async function confirmBan(){
+  const reason=document.getElementById('ban-reason').value.trim()||'Violation des conditions d\'utilisation';
+  await api('POST',`/api/admin/users/${pendingBanId}/ban`,{reason});
+  closeModal('ban-modal');
+  loadUsers();
+}
+async function unbanUser(id){
+  await api('POST',`/api/admin/users/${id}/unban`);
+  loadUsers();
+}
+
+// Sub
+let pendingSubId=null;
+function openSubModal(id,name,currentSub){
+  pendingSubId=id;
+  document.getElementById('sub-modal-sub').textContent=`Utilisateur : ${name}${currentSub?' — expire le '+fmtDateShort(currentSub):''}`;
+  document.getElementById('sub-days').value=30;
+  document.getElementById('sub-modal').classList.add('visible');
+}
+async function confirmSetSub(){
+  const days=parseInt(document.getElementById('sub-days').value)||30;
+  await api('POST',`/api/admin/users/${pendingSubId}/subscription`,{days});
+  closeModal('sub-modal');
+  loadUsers();
+}
+async function confirmClearSub(){
+  await api('DELETE',`/api/admin/users/${pendingSubId}/subscription`);
+  closeModal('sub-modal');
+  loadUsers();
+}
+
+function viewUserHistory(id,name){
+  showTab('history');
+  setTimeout(()=>{
+    document.querySelector('#panel-history .search-filter').value=name;
+    filterHistory(name);
+  },100);
+}
+
+// ── Gift cards ────────────────────────────────────────────────
+async function loadGifts(){
+  const gifts=await fetch('/api/admin/giftcards').then(r=>r.json());
+  const tbody=document.getElementById('gifts-tbody');
+  if(!gifts.length){tbody.innerHTML='<tr class="empty-row"><td colspan="7">Aucune carte</td></tr>';return}
+  tbody.innerHTML=gifts.map(g=>{
+    const used=!!g.used_by;
+    return`<tr>
+      <td><span class="code-display" style="font-size:13px;padding:4px 10px;cursor:default">${esc(g.code)}</span></td>
+      <td>${g.duration_days}j</td>
+      <td style="color:var(--muted);font-size:11px">${g.label?esc(g.label):'—'}</td>
+      <td>${used?'<span class="badge badge-muted">Utilisée</span>':'<span class="badge badge-green"><span class="badge-dot"></span>Disponible</span>'}</td>
+      <td style="font-size:11px">${g.used_by_name?esc(g.used_by_name):'—'}</td>
+      <td class="td-mono">${fmtDateShort(g.created_at)}</td>
+      <td>${!used?`<button class="btn btn-danger btn-sm" onclick="deleteGift(${g.id})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </button>`:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function generateGifts(){
+  const days=parseInt(document.getElementById('gift-days').value)||30;
+  const label=document.getElementById('gift-label').value.trim();
+  const qty=Math.min(parseInt(document.getElementById('gift-qty').value)||1,50);
+  const msgEl=document.getElementById('gift-msg');
+
+  const codes=[];
+  for(let i=0;i<qty;i++){
+    const r=await api('POST','/api/admin/giftcards',{count:1,duration_days:days,label:label||undefined});
+    if(r.codes&&r.codes.length)codes.push(r.codes[0]);
+  }
+
+  if(codes.length){
+    msgEl.textContent=`${codes.length} carte(s) générée(s) avec succès`;
+    msgEl.className='msg success visible';
+    const wrap=document.getElementById('new-codes');
+    wrap.style.display='block';
+    document.getElementById('new-codes-list').innerHTML=codes.map(c=>
+      `<div>
+        <div class="code-display" title="Cliquer pour copier" onclick="copyCode('${c}',this)">${c}</div>
+        <div class="code-tip">Cliquer pour copier</div>
+      </div>`
+    ).join('');
+    loadGifts();
+  } else {
+    msgEl.textContent='Erreur lors de la génération';
+    msgEl.className='msg error visible';
+  }
+  setTimeout(()=>msgEl.classList.remove('visible'),4000);
+}
+
+function copyCode(code,el){
+  navigator.clipboard.writeText(code).then(()=>{
+    const orig=el.textContent;
+    el.textContent='Copié !';
+    el.style.color='var(--green)';
+    setTimeout(()=>{el.textContent=orig;el.style.color=''},1500);
+  });
+}
+
+async function deleteGift(id){
+  await api('DELETE',`/api/admin/giftcards/${id}`);
+  loadGifts();
+}
+
+// ── Databases ─────────────────────────────────────────────────
+async function loadDatabases(){
+  const dbs=await fetch('/api/admin/databases').then(r=>r.json());
+  const tbody=document.getElementById('db-tbody');
+  if(!dbs.length){tbody.innerHTML='<tr class="empty-row"><td colspan="4">Aucune base</td></tr>';return}
+  tbody.innerHTML=dbs.map(db=>`<tr>
+    <td><strong style="font-size:12px">${esc(db.name)}</strong><br><span class="td-mono" style="font-size:10px;opacity:.6">${esc(db.file)}</span></td>
+    <td class="td-mono">${db.size_mb?db.size_mb+' MB':'—'}</td>
+    <td class="td-mono">${db.modified?fmtDateShort(db.modified):'—'}</td>
+    <td>
+      <button class="btn btn-danger btn-sm" onclick="deleteDB('${esc(db.name)}')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        Retirer
+      </button>
+    </td>
+  </tr>`).join('');
+}
+
+async function deleteDB(name){
+  if(!confirm(`Retirer "${name}" des bases indexées ?`))return;
+  const r=await api('DELETE',`/api/admin/databases/${encodeURIComponent(name)}`);
+  loadDatabases();
+}
+
+// ── History ───────────────────────────────────────────────────
+let allHistory=[];
+async function loadHistory(){
+  allHistory=await fetch('/api/admin/history').then(r=>r.json());
+  renderHistory(allHistory);
+}
+function filterHistory(q){
+  const f=q.toLowerCase();
+  renderHistory(allHistory.filter(h=>
+    (h.username||'').toLowerCase().includes(f)||(h.query||'').toLowerCase().includes(f)
+  ));
+}
+function renderHistory(list){
+  const tbody=document.getElementById('history-tbody');
+  if(!list.length){tbody.innerHTML='<tr class="empty-row"><td colspan="5">Aucun historique</td></tr>';return}
+  tbody.innerHTML=list.map(h=>`<tr>
+    <td><span class="badge badge-blue">${esc(h.username)}</span></td>
+    <td style="font-family:monospace;font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(h.query)}</td>
+    <td style="font-size:11px;color:var(--muted)">${h.filters?esc(h.filters):'—'}</td>
+    <td>${h.results_count??'—'}</td>
+    <td class="td-mono">${fmtDate(h.searched_at)}</td>
+  </tr>`).join('');
+}
+
+// ── Modal ─────────────────────────────────────────────────────
+function closeModal(id){document.getElementById(id).classList.remove('visible')}
+document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('visible')}));
+</script>
+</body>
+</html>

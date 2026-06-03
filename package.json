@@ -1,0 +1,23 @@
+{
+  "name": "osint-search",
+  "version": "1.0.0",
+  "description": "Multi-parquet OSINT search engine",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "install-deps": "npm install"
+  },
+  "dependencies": {
+    "@duckdb/node-api": "^1.5.1-r.1",
+    "@elastic/elasticsearch": "^9.3.4",
+    "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^12.8.0",
+    "connect-sqlite3": "^0.9.16",
+    "express": "^4.18.2",
+    "express-session": "^1.19.0"
+  },
+  "devDependencies": {}
+}

@@ -9,7 +9,7 @@ const { DuckDBInstance } = require('@duckdb/node-api');
 const { db, stmt, generateGiftCode, isSubscribed } = require('./db');
 
 const app          = express();
-const PORT         = 3000;
+const PORT         = 8212;
 const PARQUET_DIR  = '../';
 const MERGED_FILE  = '../merged.parquet';
 
@@ -484,25 +484,25 @@ function buildWhere(q, filters) {
 
     else if (type === 'phone') {
       const variants = phoneVariants(cleanQ)
-        .map(v => `list_contains(phone_numbers, '${esc(v)}')`);
+        .map(v => `list_contains(phone_numbers, '${esc(v.toUpperCase())}')`);
       conds.push(`(${variants.join(' OR ')})`);
     }
 
     else if (type === 'postal') {
-      conds.push(`postal_code = '${esc(cleanQ)}'`);
+      conds.push(`postal_code = '${esc(cleanQ.toUpperCase())}'`);
     }
 
     else if (type === 'ip') {
-      conds.push(`ip_address = '${esc(cleanQ)}'`);
+      conds.push(`ip_address = '${esc(cleanQ.toUpperCase())}'`);
     }
     
 
     else {
       // 🔥 PLUS DE ILIKE → RANGE
       conds.push(`(
-        ${prefixRange('last_name', cleanQ)}
+        ${prefixRange('last_name', cleanQ.toUpperCase())}
         OR
-        ${prefixRange('first_name', cleanQ)}
+        ${prefixRange('first_name', cleanQ.toUpperCase())}
       )`);
     }
   }
@@ -512,11 +512,11 @@ function buildWhere(q, filters) {
   // ⚡ EXACT (rapide)
   for (const k of ['postal_code', 'ip_address', 'nir', 'iban', 'discord_id','representative_last_name','representative_first_name']) {
     const val = fv(k);
-    if (val) conds.push(`${k} LIKE '${esc(val)}%'`);
+    if (val) conds.push(`${k} LIKE '${esc(val.toUpperCase())}%'`);
   }
   for (const k of ['date_of_born']) {
     const val = fv(k);
-    if (val) conds.push(`${k} LIKE '%${esc(val)}%'`);
+    if (val) conds.push(`${k} LIKE '%${esc(val.toUpperCase())}%'`);
   }
 
   // 🔥 PREFIX optimisé
@@ -525,12 +525,12 @@ function buildWhere(q, filters) {
     'username', 'bic', 'vehicule_imatriculation'
   ]) {
     const val = fv(k);
-    if (val) conds.push(prefixRange(k, val));
+    if (val) conds.push(prefixRange(k, val.toUpperCase()));
   }
 
   // ❌ contains = lent → à éviter si possible
   const address = fv('address');
-  if (address) conds.push(`address LIKE '%${esc(address)}%'`);
+  if (address) conds.push(`address LIKE '%${esc(address.toUpperCase())}%'`);
 
   // listes
   const email = fv('email');
@@ -539,7 +539,7 @@ function buildWhere(q, filters) {
   const phone = fv('phone');
   if (phone) {
     const variants = phoneVariants(phone)
-      .map(v => `list_contains(phone_numbers, '${esc(v)}')`);
+      .map(v => `list_contains(phone_numbers, '${esc(v.toUpperCase())}')`);
     conds.push(`(${variants.join(' OR ')})`);
   }
 

@@ -9,7 +9,7 @@ const { DuckDBInstance } = require('@duckdb/node-api');
 const { db, stmt, generateGiftCode, isSubscribed } = require('./db');
 
 const app          = express();
-const PORT         = 8212;
+const PORT         = 3000;
 const PARQUET_DIR  = '../';
 const MERGED_FILE  = '../merged.parquet';
 
